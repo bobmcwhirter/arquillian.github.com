@@ -82,14 +82,10 @@ module Awestruct::Extensions::Releases
               File.join(@path_prefix, release_page.date.strftime('%Y-%m-%d-') + release_page_name.tr('.', '-')) + '.html'
 
           # pre-render the content so that the entry can be wrapped in the common release text
-          release_page.rendered_content = release_page.render(site.engine.create_context(release_page, inner_release_page.content))
+          release_page.pre_rendered_content = release_page.rendered_content(release_page.create_context(inner_release_page.content), false)
           class << release_page
-            def render(context)
-              self.rendered_content
-            end
-
-            def content
-              self.rendered_content
+            def content(with_layouts=true)
+              self.pre_rendered_content
             end
           end
           site.pages << release_page
