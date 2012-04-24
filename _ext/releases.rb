@@ -30,14 +30,13 @@ module Awestruct::Extensions::Releases
           release_page_name = repo_path + '-' + release.version
           release_page_simple_input_path = File.join(@path_prefix, release_page_name)
           release_page_input_path = find_input_path(site.dir, release_page_simple_input_path) 
+   
           if !release_page_input_path.nil?
             # Use existing release page if present
             # This page should always be found since awestruct should have detected it (like any other page)
             comparison_path = '/' + release_page_input_path
             inner_release_page = site.pages.find {|candidate| candidate.relative_source_path.eql? comparison_path }
             post_author = !inner_release_page.author.nil? ? inner_release_page.author : get_post_author(inner_release_page)
-            post_tags = inner_release_page.tags
-            post_title = inner_release_page.title
             site.pages.delete inner_release_page
           else
             # Generate release page from template if not present
@@ -47,28 +46,32 @@ module Awestruct::Extensions::Releases
           end
 
           # FIXME we can use site.layouts to get the layout
-          layouts_dir = File.basename site.engine.config.layouts_dir
-          release_page = site.engine.find_and_load_site_page(File.join(layouts_dir, 'release'))
+          #layouts_dir = File.basename site.engine.config.layouts_dir
+          #release_page = site.engine.find_and_load_site_page(File.join(layouts_dir, 'release'))
+
+          inner_release_page.layout = 'release_boilerplate'
+          inner_release_page.release = release
+          inner_release_page.component = component
+          inner_release_page.date = Time.utc(release.date.year, release.date.month, release.date.day)
+
+          release_page = Awestruct::Page.new( site, inner_release_page )
+          release_page.layout = 'release'
+          #release_page.prepare!
           release_page.output_path = File.join(@path_prefix, release_page_name.tr('.', '-')) + '.html'
 
           release.page = release_page
 
           release_page.release = release
           release_page.component = component
-          if post_title
-            release_page.title = post_title
-          else
+          if !release_page.title?
             release_page.title ||= "#{component.name} #{release.version} Released"
           end
-          release_page.author ||= !post_author.nil? ? post_author : site.identities.lookup_by_contributor(release.released_by).username
+          release_page.author ||= site.identities.lookup_by_contributor(release.released_by).username
           # why do we need to do Time.utc?
           #release_page.date ||= release.date
           release_page.date = Time.utc(release.date.year, release.date.month, release.date.day)
           #release_page.layout ||= 'release'
           release_page.tags ||= []
-          if post_tags
-            release_page.tags += post_tags
-          end
           release_page.tags << 'release' << component.type.gsub('_', '-') << component.key
           if component.type =~ /(platform|extension)/ and release.version.end_with? '.Final'
             release_page.tags << 'jbosscentral' if !release_page.tags.include? 'jbosscentral'
@@ -81,13 +84,7 @@ module Awestruct::Extensions::Releases
           release_page.relative_source_path =
               File.join(@path_prefix, release_page.date.strftime('%Y-%m-%d-') + release_page_name.tr('.', '-')) + '.html'
 
-          # pre-render the content so that the entry can be wrapped in the common release text
-          release_page.pre_rendered_content = release_page.rendered_content(release_page.create_context(inner_release_page.content), false)
-          class << release_page
-            def content(with_layouts=true)
-              self.pre_rendered_content
-            end
-          end
+          puts release_page.inspect
           site.pages << release_page
         end
       end
