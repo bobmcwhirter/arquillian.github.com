@@ -82,9 +82,8 @@ module Awestruct::Extensions::Releases
             release_page.release_notes = site.release_notes[release.key]
           end
 
-          # Fix date calculation performed by Posts extension
-          release_page.relative_source_path =
-              File.join(@path_prefix, release_page.date.strftime('%Y-%m-%d-') + release_page_name.tr('.', '-')) + '.html'
+          # Fix page slugging by NOT alterating the relative-source-path.
+          release_page.slug = release_page_name.tr('.', '-')
 
           site.pages << release_page
         end
